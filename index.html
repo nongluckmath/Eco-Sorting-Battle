@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco Sorting Battle - ระบบเชื่อมต่อ Firebase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+        .btn-hover:active { transform: scale(0.95); }
+        .update-flash { animation: flash 0.5s ease-out; }
+        @keyframes flash {
+            0% { background-color: rgba(16, 185, 129, 0.2); }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body class="bg-emerald-50 min-h-screen flex flex-col items-center p-4">
+
+    <!-- Header -->
+    <header class="text-center my-6">
+        <h1 class="text-4xl font-bold text-emerald-800 flex items-center justify-center gap-2">
+            🌱 Eco Sorting Battle
+        </h1>
+        <p class="text-emerald-600 mt-2 text-sm md:text-base italic">เชื่อมต่อกับฐานข้อมูล my-education-app สำเร็จ</p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-6 relative border-b-8 border-emerald-200">
+        
+        <!-- Login Screen -->
+        <div id="login-screen" class="space-y-6">
+            <div class="text-center">
+                <div class="text-6xl mb-4">♻️</div>
+                <h2 class="text-2xl font-semibold text-gray-800">เริ่มบันทึกคะแนนจริง</h2>
+                <p class="text-gray-500">ใส่ชื่อเล่นเพื่อเชื่อมต่อข้อมูลกับ Firebase</p>
+            </div>
+            <input type="text" id="player-name" placeholder="ระบุชื่อเล่นของคุณ..." 
+                class="w-full px-4 py-3 border-2 border-emerald-100 rounded-xl focus:border-emerald-500 outline-none text-lg">
+            <button id="btn-start"
+                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg btn-hover transition-all">
+                เข้าสู่เกม
+            </button>
+            
+            <!-- Live Leaderboard Section -->
+            <div class="mt-8 border-t pt-4 bg-gray-50 -mx-6 px-6 pb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-emerald-800">🏆 อันดับแบบ Real-time</h3>
+                    <span id="status-tag" class="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                        <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full"></span> 
+                        <span id="status-text">Connecting</span>
+                    </span>
+                </div>
+                <div id="leaderboard-list" class="space-y-2">
+                    <p class="text-center text-gray-400 text-sm italic">กำลังตรวจสอบการเชื่อมต่อ...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen (Hidden) -->
+        <div id="game-screen" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-emerald-100 p-3 rounded-2xl border border-emerald-200">
+                <div class="text-lg font-bold text-emerald-800">⏱️ <span id="timer">60</span> s</div>
+                <div class="text-lg font-bold text-emerald-800">⭐️ แต้ม: <span id="score">0</span></div>
+            </div>
+
+            <div id="item-container" class="py-12 px-4 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border-2 border-dashed border-emerald-200 text-center min-h-[220px]">
+                <div id="item-emoji" class="text-7xl mb-4 animate-bounce">📦</div>
+                <h2 id="item-name" class="text-3xl font-bold text-gray-800 leading-tight">...</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-recycle" class="bg-blue-500 text-white p-4 rounded-2xl font-bold btn-hover shadow-md">🔵 รีไซเคิล</button>
+                <button id="btn-organic" class="bg-green-500 text-white p-4 rounded-2xl font-bold btn-hover shadow-md">🟢 อินทรีย์</button>
+                <button id="btn-hazard" class="bg-yellow-500 text-white p-4 rounded-2xl font-bold btn-hover shadow-md border-b-4 border-yellow-700">🟡 อันตราย</button>
+                <button id="btn-general" class="bg-gray-500 text-white p-4 rounded-2xl font-bold btn-hover shadow-md">⚫ ทั่วไป</button>
+            </div>
+        </div>
+
+        <!-- Result Modal -->
+        <div id="result-modal" class="hidden absolute inset-0 bg-white bg-opacity-95 flex flex-col items-center justify-center p-6 text-center z-50">
+            <div class="text-6xl mb-4">🏅</div>
+            <h2 class="text-3xl font-bold text-emerald-800 mb-2">จบการแข่ง!</h2>
+            <p id="final-stats" class="text-xl text-gray-600 mb-6 font-semibold"></p>
+            <button onclick="location.reload()" class="bg-emerald-600 text-white px-10 py-3 rounded-full font-bold shadow-lg hover:bg-emerald-700">กลับสู่หน้าหลัก</button>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // --- 1. การตั้งค่า Firebase ของคุณ ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5DmgQGt7shLyB-ni89tv8WEgx4Ikv_A4",
+            authDomain: "my-education-app-56791.firebaseapp.com",
+            projectId: "my-education-app-56791",
+            storageBucket: "my-education-app-56791.firebasestorage.app",
+            messagingSenderId: "784125477428",
+            appId: "1:784125477428:web:51df7a5db8fda352114061",
+            measurementId: "G-4E1P7E6WRJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // กำหนด ID ของแอปเพื่อแยกฐานข้อมูลใน Firestore
+        const appId = "my-education-app-56791";
+
+        let currentUser = null;
+        let score = 0;
+        let timeLeft = 60;
+        let currentItem = null;
+        let timerInterval = null;
+        let playerName = "";
+
+        const items = [
+            // รีไซเคิล (🔵 recycle)
+            { name: "ขวดน้ำพลาสติก", type: "recycle", emoji: "🧴" },
+            { name: "กระป๋องน้ำอัดลม", type: "recycle", emoji: "🥤" },
+            { name: "หนังสือพิมพ์เก่า", type: "recycle", emoji: "📰" },
+            { name: "ขวดแก้วเปล่า", type: "recycle", emoji: "🍾" },
+            { name: "กล่องกระดาษลัง", type: "recycle", emoji: "📦" },
+            { name: "แผ่นอลูมิเนียมฟอยล์", type: "recycle", emoji: "🌯" },
+            { name: "นิตยสารเก่า", type: "recycle", emoji: "📚" },
+            { name: "กระป๋องอลูมิเนียม", type: "recycle", emoji: "🥫" },
+
+            // อินทรีย์ (🟢 organic)
+            { name: "เศษผักและผลไม้", type: "organic", emoji: "🥬" },
+            { name: "เปลือกไข่", type: "organic", emoji: "🥚" },
+            { name: "เปลือกกล้วย", type: "organic", emoji: "🍌" },
+            { name: "ก้างปลา", type: "organic", emoji: "🐟" },
+            { name: "เศษเนื้อสัตว์", type: "organic", emoji: "🍗" },
+            { name: "ใบไม้แห้ง", type: "organic", emoji: "🍂" },
+            { name: "แกนสับปะรด", type: "organic", emoji: "🍍" },
+            { name: "เศษหญ้า", type: "organic", emoji: "🌱" },
+
+            // อันตราย (🟡 hazard)
+            { name: "ถ่านไฟฉาย", type: "hazard", emoji: "🔋" },
+            { name: "หลอดไฟเก่า", type: "hazard", emoji: "💡" },
+            { name: "กระป๋องสเปรย์", type: "hazard", emoji: "💨" },
+            { name: "ยาหมดอายุ", type: "hazard", emoji: "💊" },
+            { name: "แบตเตอรี่มือถือ", type: "hazard", emoji: "📱" },
+            { name: "แผงวงจรไฟฟ้า", type: "hazard", emoji: "📟" },
+            { name: "กระป๋องสีเก่า", type: "hazard", emoji: "🎨" },
+            { name: "ขวดยาล้างห้องน้ำ", type: "hazard", emoji: "🧪" },
+
+            // ทั่วไป (⚫ general)
+            { name: "ซองขนมขบเคี้ยว", type: "general", emoji: "🍟" },
+            { name: "กล่องโฟมเปื้อน", type: "general", emoji: "🍱" },
+            { name: "กระดาษทิชชู่ใช้แล้ว", type: "general", emoji: "🧻" },
+            { name: "หลอดดูดน้ำพลาสติก", type: "general", emoji: "🥤" },
+            { name: "หน้ากากอนามัย", type: "general", emoji: "😷" },
+            { name: "ซองบะหมี่สำเร็จรูป", type: "general", emoji: "🍜" },
+            { name: "หนังยางเส้น", type: "general", emoji: "➰" },
+            { name: "ถุงพลาสติกเปื้อนอาหาร", type: "general", emoji: "🛍️" }
+        ];
+
+        const startGame = () => {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) return alert("กรุณาระบุชื่อเล่นครับ");
+            playerName = name;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            nextItem();
+            startTimer();
+        };
+
+        function nextItem() {
+            currentItem = items[Math.floor(Math.random() * items.length)];
+            document.getElementById('item-name').innerText = currentItem.name;
+            document.getElementById('item-emoji').innerText = currentItem.emoji;
+        }
+
+        const checkAnswer = (type) => {
+            const container = document.getElementById('item-container');
+            if (type === currentItem.type) {
+                score += 10;
+                flashEffect(container, 'bg-green-100');
+            } else {
+                score = Math.max(0, score - 5);
+                flashEffect(container, 'bg-red-100');
+            }
+            document.getElementById('score').innerText = score;
+            nextItem();
+        };
+
+        function flashEffect(el, colorClass) {
+            el.classList.remove('bg-gray-50');
+            el.classList.add(colorClass);
+            setTimeout(() => {
+                el.classList.remove(colorClass);
+                el.classList.add('bg-gray-50');
+            }, 200);
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        async function endGame() {
+            clearInterval(timerInterval);
+            document.getElementById('final-stats').innerText = `คุณ ${playerName} ทำได้ ${score} คะแนน`;
+            document.getElementById('result-modal').classList.remove('hidden');
+            
+            if (currentUser) {
+                try {
+                    // บันทึกลง Path: artifacts/my-education-app-56791/public/data/scores
+                    const ref = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                    await addDoc(ref, { 
+                        name: playerName, 
+                        score, 
+                        timestamp: serverTimestamp(),
+                        uid: currentUser.uid 
+                    });
+                } catch (e) { console.error("Error saving score:", e); }
+            }
+        }
+
+        function setupLeaderboard() {
+            const ref = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+            
+            onSnapshot(ref, (snap) => {
+                updateStatus(true);
+                const list = document.getElementById('leaderboard-list');
+                let rawData = [];
+                snap.forEach(doc => rawData.push(doc.data()));
+                
+                const bestScores = {};
+                rawData.forEach(r => {
+                    if (!bestScores[r.name] || r.score > bestScores[r.name].score) bestScores[r.name] = r;
+                });
+
+                const sorted = Object.values(bestScores).sort((a, b) => b.score - a.score).slice(0, 5);
+
+                if (sorted.length === 0) {
+                    list.innerHTML = '<p class="text-center text-gray-400 text-xs italic">ยังไม่มีใครทำคะแนน เริ่มเล่นเลย!</p>';
+                    return;
+                }
+
+                list.innerHTML = sorted.map((s, i) => `
+                    <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-emerald-100 shadow-sm update-flash">
+                        <span class="font-bold text-emerald-800">#${i + 1} ${s.name}</span>
+                        <span class="bg-emerald-600 text-white px-3 py-1 rounded-full font-bold text-sm">${s.score}</span>
+                    </div>
+                `).join('');
+            }, (error) => {
+                updateStatus(false);
+                console.error("Leaderboard error:", error);
+            });
+        }
+
+        function updateStatus(online) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const tag = document.getElementById('status-tag');
+            if (online) {
+                dot.className = "w-2 h-2 bg-red-500 rounded-full animate-pulse";
+                text.innerText = "Live Online";
+                tag.classList.replace('text-gray-400', 'text-emerald-600');
+            } else {
+                dot.className = "w-2 h-2 bg-gray-400 rounded-full";
+                text.innerText = "Offline/Error";
+                tag.classList.replace('text-emerald-600', 'text-gray-400');
+            }
+        }
+
+        document.getElementById('btn-start').onclick = startGame;
+        document.getElementById('btn-recycle').onclick = () => checkAnswer('recycle');
+        document.getElementById('btn-organic').onclick = () => checkAnswer('organic');
+        document.getElementById('btn-hazard').onclick = () => checkAnswer('hazard');
+        document.getElementById('btn-general').onclick = () => checkAnswer('general');
+
+        window.onload = async () => {
+            // ทำการ Login แบบไม่ระบุตัวตนทันทีที่เข้าเว็บ
+            try {
+                await signInAnonymously(auth);
+            } catch (e) { console.error("Anonymous login error:", e); }
+
+            onAuthStateChanged(auth, user => {
+                currentUser = user;
+                if (user) setupLeaderboard();
+            });
+        };
+    </script>
+</body>
+</html>
