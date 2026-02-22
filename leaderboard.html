@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Eco Sorting Battle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+        .rank-1 { background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%); }
+        .rank-2 { background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); }
+        .rank-3 { background: linear-gradient(135deg, #fdba74 0%, #f97316 100%); }
+        .update-flash { animation: flash 0.5s ease-out; }
+        @keyframes flash {
+            0% { background-color: rgba(16, 185, 129, 0.1); }
+            100% { background-color: white; }
+        }
+    </style>
+</head>
+<body class="bg-emerald-50 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl font-black text-emerald-800 flex items-center gap-3">
+                    🏆 กระดานคะแนนเกียรติยศ
+                </h1>
+                <p class="text-emerald-600 mt-1">อันดับสุดยอดนักแยกขยะรักษ์โลกแบบ Real-time</p>
+            </div>
+            <a href="index.html" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
+                🎮 กลับไปเล่นเกม
+            </a>
+        </div>
+
+        <!-- Status & Stats Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase font-bold">สถานะระบบ</p>
+                    <p id="status-text" class="text-emerald-600 font-bold">Connecting...</p>
+                </div>
+                <div id="status-dot" class="w-3 h-3 bg-gray-300 rounded-full"></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100">
+                <p class="text-xs text-gray-400 uppercase font-bold">จำนวนผู้เข้าร่วมทั้งหมด</p>
+                <p id="total-players" class="text-emerald-800 text-2xl font-black">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100">
+                <p class="text-xs text-gray-400 uppercase font-bold">คะแนนสูงสุด</p>
+                <p id="top-score-value" class="text-emerald-800 text-2xl font-black">0</p>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-emerald-100">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-emerald-600 text-white">
+                            <th class="p-5 font-bold uppercase text-sm">อันดับ</th>
+                            <th class="p-5 font-bold uppercase text-sm">ชื่อนักแยกขยะ</th>
+                            <th class="p-5 font-bold uppercase text-sm text-center">คะแนน</th>
+                            <th class="p-5 font-bold uppercase text-sm text-right">วันที่บันทึก</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <!-- ข้อมูลจะถูกโหลดที่นี่ -->
+                        <tr>
+                            <td colspan="4" class="p-20 text-center text-gray-400 italic">
+                                กำลังดึงข้อมูลจากดาวเทียมรักษ์โลก...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center">
+            <p class="text-emerald-800 font-medium italic">พัฒนาโดย WRB IT รักษ์โลก</p>
+            <p class="text-gray-400 text-xs mt-2">ข้อมูลจะอัปเดตโดยอัตโนมัติเมื่อมีการเล่นจบ</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // --- Firebase Config (Same as index.html) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5DmgQGt7shLyB-ni89tv8WEgx4Ikv_A4",
+            authDomain: "my-education-app-56791.firebaseapp.com",
+            projectId: "my-education-app-56791",
+            storageBucket: "my-education-app-56791.firebasestorage.app",
+            messagingSenderId: "784125477428",
+            appId: "1:784125477428:web:51df7a5db8fda352114061",
+            measurementId: "G-4E1P7E6WRJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "my-education-app-56791";
+
+        function updateStatus(isOnline) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (isOnline) {
+                dot.className = "w-3 h-3 bg-red-500 rounded-full animate-pulse";
+                text.innerText = "Live Online";
+                text.className = "text-emerald-600 font-bold";
+            } else {
+                dot.className = "w-3 h-3 bg-gray-300 rounded-full";
+                text.innerText = "Connecting...";
+                text.className = "text-gray-400 font-bold";
+            }
+        }
+
+        function setupRealtimeLeaderboard() {
+            const scoreRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+            
+            onSnapshot(scoreRef, (snap) => {
+                updateStatus(true);
+                let rawData = [];
+                snap.forEach(doc => rawData.push(doc.data()));
+
+                // Group by player name and keep the best score
+                const bestScoresMap = {};
+                rawData.forEach(record => {
+                    if (!bestScoresMap[record.name] || record.score > bestScoresMap[record.name].score) {
+                        bestScoresMap[record.name] = record;
+                    }
+                });
+
+                const sortedData = Object.values(bestScoresMap).sort((a, b) => b.score - a.score);
+                
+                // Update Stats
+                document.getElementById('total-players').innerText = sortedData.length;
+                document.getElementById('top-score-value').innerText = sortedData.length > 0 ? sortedData[0].score : 0;
+
+                const tbody = document.getElementById('leaderboard-body');
+                
+                if (sortedData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-gray-400">ยังไม่มีผู้บันทึกคะแนนในขณะนี้</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = sortedData.map((data, index) => {
+                    const rank = index + 1;
+                    let rankClass = "";
+                    let rankIcon = rank;
+                    
+                    if (rank === 1) { rankClass = "rank-1 text-white shadow-md rounded-lg inline-block px-3 py-1"; rankIcon = "🥇"; }
+                    else if (rank === 2) { rankClass = "rank-2 text-gray-700 shadow-sm rounded-lg inline-block px-3 py-1"; rankIcon = "🥈"; }
+                    else if (rank === 3) { rankClass = "rank-3 text-white shadow-sm rounded-lg inline-block px-3 py-1"; rankIcon = "🥉"; }
+                    
+                    const dateStr = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString('th-TH', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+
+                    return `
+                        <tr class="border-b border-gray-50 hover:bg-emerald-50 transition-colors update-flash">
+                            <td class="p-5">
+                                <span class="${rankClass} font-black text-lg">${rankIcon}</span>
+                            </td>
+                            <td class="p-5">
+                                <p class="font-bold text-gray-800 text-lg">${data.name}</p>
+                            </td>
+                            <td class="p-5 text-center">
+                                <span class="text-2xl font-black text-emerald-700">${data.score}</span>
+                            </td>
+                            <td class="p-5 text-right text-gray-400 text-sm">
+                                ${dateStr}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            }, (error) => {
+                console.error("Leaderboard error:", error);
+                updateStatus(false);
+            });
+        }
+
+        window.onload = async () => {
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (user) => {
+                    if (user) setupRealtimeLeaderboard();
+                });
+            } catch (e) {
+                console.error("Auth init error:", e);
+            }
+        };
+    </script>
+</body>
+</html>
