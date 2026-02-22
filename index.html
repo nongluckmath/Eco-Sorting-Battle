@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eco Sorting Battle - ระบบเชื่อมต่อ Firebase</title>
+    <title>Eco Sorting Battle - Firebase Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
@@ -14,27 +14,29 @@
             0% { background-color: rgba(16, 185, 129, 0.2); }
             100% { background-color: transparent; }
         }
+        .screen { display: none; }
+        .screen.active { display: block; }
     </style>
 </head>
 <body class="bg-emerald-50 min-h-screen flex flex-col items-center p-4">
 
-    <!-- Header -->
+    <!-- ส่วนหัวของเว็บไซต์ -->
     <header class="text-center my-6">
         <h1 class="text-4xl font-bold text-emerald-800 flex items-center justify-center gap-2">
             🌱 Eco Sorting Battle
         </h1>
-        <p class="text-emerald-600 mt-2 text-sm md:text-base italic">เชื่อมต่อกับฐานข้อมูล my-education-app สำเร็จ</p>
+        <p class="text-emerald-600 mt-2 text-sm md:text-base italic">ระบบเชื่อมต่อฐานข้อมูล Firebase เรียบร้อยแล้ว</p>
     </header>
 
-    <!-- Main Container -->
+    <!-- คอนเทนเนอร์หลัก -->
     <main class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-6 relative border-b-8 border-emerald-200">
         
-        <!-- Login Screen -->
-        <div id="login-screen" class="space-y-6">
+        <!-- 1. หน้าจอเข้าสู่ระบบ (Login Screen) -->
+        <div id="login-screen" class="screen active space-y-6">
             <div class="text-center">
                 <div class="text-6xl mb-4">♻️</div>
-                <h2 class="text-2xl font-semibold text-gray-800">เริ่มบันทึกคะแนนจริง</h2>
-                <p class="text-gray-500">ใส่ชื่อเล่นเพื่อเชื่อมต่อข้อมูลกับ Firebase</p>
+                <h2 class="text-2xl font-semibold text-gray-800">ยินดีต้อนรับ</h2>
+                <p class="text-gray-500">ใส่ชื่อเล่นเพื่อเริ่มการแข่งขันออนไลน์</p>
             </div>
             <input type="text" id="player-name" placeholder="ระบุชื่อเล่นของคุณ..." 
                 class="w-full px-4 py-3 border-2 border-emerald-100 rounded-xl focus:border-emerald-500 outline-none text-lg">
@@ -43,23 +45,22 @@
                 เข้าสู่เกม
             </button>
             
-            <!-- Live Leaderboard Section -->
-            <div class="mt-8 border-t pt-4 bg-gray-50 -mx-6 px-6 pb-6">
+            <div class="mt-8 border-t pt-4">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-emerald-800">🏆 อันดับแบบ Real-time</h3>
+                    <h3 class="font-bold text-emerald-800">🏆 อันดับสูงสุดตอนนี้</h3>
                     <span id="status-tag" class="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                         <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full"></span> 
                         <span id="status-text">Connecting</span>
                     </span>
                 </div>
-                <div id="leaderboard-list" class="space-y-2">
-                    <p class="text-center text-gray-400 text-sm italic">กำลังตรวจสอบการเชื่อมต่อ...</p>
+                <div id="leaderboard-login" class="space-y-2">
+                    <p class="text-center text-gray-400 text-sm italic">กำลังเชื่อมต่อข้อมูล...</p>
                 </div>
             </div>
         </div>
 
-        <!-- Game Screen (Hidden) -->
-        <div id="game-screen" class="hidden space-y-6">
+        <!-- 2. หน้าจอเล่นเกม (Game Screen) -->
+        <div id="game-screen" class="screen space-y-6">
             <div class="flex justify-between items-center bg-emerald-100 p-3 rounded-2xl border border-emerald-200">
                 <div class="text-lg font-bold text-emerald-800">⏱️ <span id="timer">60</span> s</div>
                 <div class="text-lg font-bold text-emerald-800">⭐️ แต้ม: <span id="score">0</span></div>
@@ -78,19 +79,37 @@
             </div>
         </div>
 
-        <!-- Result Modal -->
-        <div id="result-modal" class="hidden absolute inset-0 bg-white bg-opacity-95 flex flex-col items-center justify-center p-6 text-center z-50">
-            <div class="text-6xl mb-4">🏅</div>
-            <h2 class="text-3xl font-bold text-emerald-800 mb-2">จบการแข่ง!</h2>
-            <p id="final-stats" class="text-xl text-gray-600 mb-6 font-semibold"></p>
-            <button onclick="location.reload()" class="bg-emerald-600 text-white px-10 py-3 rounded-full font-bold shadow-lg hover:bg-emerald-700">กลับสู่หน้าหลัก</button>
+        <!-- 3. หน้าจอสรุปผล (Result Screen) -->
+        <div id="result-screen" class="screen space-y-6">
+            <div class="text-center py-4">
+                <div class="text-6xl mb-4">🎖️</div>
+                <h2 class="text-3xl font-bold text-emerald-800">จบการแข่งขัน!</h2>
+                <div class="my-6 bg-emerald-50 py-4 rounded-2xl border-2 border-emerald-100">
+                    <p class="text-gray-600 text-lg">คุณ <span id="res-name" class="font-bold text-emerald-700">...</span></p>
+                    <p class="text-4xl font-black text-emerald-800 mt-2">ได้ <span id="res-score">0</span> คะแนน</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="font-bold text-emerald-800 flex items-center gap-2">
+                    🏆 กระดานคะแนนเรียลไทม์
+                </h3>
+                <div id="leaderboard-result" class="space-y-2 max-h-[200px] overflow-y-auto">
+                    <!-- รายการคะแนนจะแสดงที่นี่ -->
+                </div>
+            </div>
+
+            <button onclick="location.reload()" 
+                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg btn-hover transition-all mt-4">
+                กลับหน้าหลัก
+            </button>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // --- 1. การตั้งค่า Firebase ของคุณ ---
         const firebaseConfig = {
@@ -107,7 +126,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // กำหนด ID ของแอปเพื่อแยกฐานข้อมูลใน Firestore
+        // ใช้ projectId เป็น appId เพื่อจัดเก็บข้อมูลใน Firestore ตาม Rule
         const appId = "my-education-app-56791";
 
         let currentUser = null;
@@ -122,21 +141,21 @@
             { name: "ขวดน้ำพลาสติก", type: "recycle", emoji: "🧴" },
             { name: "กระป๋องน้ำอัดลม", type: "recycle", emoji: "🥤" },
             { name: "หนังสือพิมพ์เก่า", type: "recycle", emoji: "📰" },
-            { name: "ขวดแก้วเปล่า", type: "recycle", emoji: "🍾" },
             { name: "กล่องกระดาษลัง", type: "recycle", emoji: "📦" },
-            { name: "แผ่นอลูมิเนียมฟอยล์", type: "recycle", emoji: "🌯" },
+            { name: "ขวดแก้วโซดา", type: "recycle", emoji: "🍾" },
             { name: "นิตยสารเก่า", type: "recycle", emoji: "📚" },
             { name: "กระป๋องอลูมิเนียม", type: "recycle", emoji: "🥫" },
+            { name: "ขวดแชมพูพลาสติก", type: "recycle", emoji: "🧼" },
 
             // อินทรีย์ (🟢 organic)
-            { name: "เศษผักและผลไม้", type: "organic", emoji: "🥬" },
+            { name: "เศษผักผลไม้", type: "organic", emoji: "🥬" },
             { name: "เปลือกไข่", type: "organic", emoji: "🥚" },
             { name: "เปลือกกล้วย", type: "organic", emoji: "🍌" },
             { name: "ก้างปลา", type: "organic", emoji: "🐟" },
-            { name: "เศษเนื้อสัตว์", type: "organic", emoji: "🍗" },
             { name: "ใบไม้แห้ง", type: "organic", emoji: "🍂" },
+            { name: "เปลือกส้ม", type: "organic", emoji: "🍊" },
+            { name: "เศษขนมปัง", type: "organic", emoji: "🍞" },
             { name: "แกนสับปะรด", type: "organic", emoji: "🍍" },
-            { name: "เศษหญ้า", type: "organic", emoji: "🌱" },
 
             // อันตราย (🟡 hazard)
             { name: "ถ่านไฟฉาย", type: "hazard", emoji: "🔋" },
@@ -144,27 +163,35 @@
             { name: "กระป๋องสเปรย์", type: "hazard", emoji: "💨" },
             { name: "ยาหมดอายุ", type: "hazard", emoji: "💊" },
             { name: "แบตเตอรี่มือถือ", type: "hazard", emoji: "📱" },
-            { name: "แผงวงจรไฟฟ้า", type: "hazard", emoji: "📟" },
-            { name: "กระป๋องสีเก่า", type: "hazard", emoji: "🎨" },
-            { name: "ขวดยาล้างห้องน้ำ", type: "hazard", emoji: "🧪" },
+            { name: "ขวดยาฆ่าแมลง", type: "hazard", emoji: "🧪" },
+            { name: "ตลับหมึกเครื่องพิมพ์", type: "hazard", emoji: "🖨️" },
+            { name: "กระป๋องสีสเปรย์", type: "hazard", emoji: "🎨" },
 
             // ทั่วไป (⚫ general)
-            { name: "ซองขนมขบเคี้ยว", type: "general", emoji: "🍟" },
+            { name: "ซองขนม", type: "general", emoji: "🍟" },
             { name: "กล่องโฟมเปื้อน", type: "general", emoji: "🍱" },
             { name: "กระดาษทิชชู่ใช้แล้ว", type: "general", emoji: "🧻" },
-            { name: "หลอดดูดน้ำพลาสติก", type: "general", emoji: "🥤" },
             { name: "หน้ากากอนามัย", type: "general", emoji: "😷" },
-            { name: "ซองบะหมี่สำเร็จรูป", type: "general", emoji: "🍜" },
-            { name: "หนังยางเส้น", type: "general", emoji: "➰" },
-            { name: "ถุงพลาสติกเปื้อนอาหาร", type: "general", emoji: "🛍️" }
+            { name: "หลอดดูดน้ำ", type: "general", emoji: "🥤" },
+            { name: "ซองกาแฟ", type: "general", emoji: "☕" },
+            { name: "ถุงพลาสติกเปื้อนอาหาร", type: "general", emoji: "🛍️" },
+            { name: "หนังยาง", type: "general", emoji: "➰" }
         ];
+
+        // ระบบสลับหน้าจอ
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
 
         const startGame = () => {
             const name = document.getElementById('player-name').value.trim();
             if (!name) return alert("กรุณาระบุชื่อเล่นครับ");
             playerName = name;
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
+            showScreen('game-screen');
+            score = 0;
+            timeLeft = 60;
+            document.getElementById('score').innerText = score;
             nextItem();
             startTimer();
         };
@@ -207,8 +234,9 @@
 
         async function endGame() {
             clearInterval(timerInterval);
-            document.getElementById('final-stats').innerText = `คุณ ${playerName} ทำได้ ${score} คะแนน`;
-            document.getElementById('result-modal').classList.remove('hidden');
+            document.getElementById('res-name').innerText = playerName;
+            document.getElementById('res-score').innerText = score;
+            showScreen('result-screen');
             
             if (currentUser) {
                 try {
@@ -227,30 +255,36 @@
         function setupLeaderboard() {
             const ref = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
             
+            // ใช้ onSnapshot สำหรับ Real-time updates
             onSnapshot(ref, (snap) => {
                 updateStatus(true);
-                const list = document.getElementById('leaderboard-list');
+                const listLogin = document.getElementById('leaderboard-login');
+                const listResult = document.getElementById('leaderboard-result');
                 let rawData = [];
                 snap.forEach(doc => rawData.push(doc.data()));
                 
+                // คัดกรองคะแนนที่ดีที่สุดของแต่ละคน
                 const bestScores = {};
                 rawData.forEach(r => {
                     if (!bestScores[r.name] || r.score > bestScores[r.name].score) bestScores[r.name] = r;
                 });
 
-                const sorted = Object.values(bestScores).sort((a, b) => b.score - a.score).slice(0, 5);
-
-                if (sorted.length === 0) {
-                    list.innerHTML = '<p class="text-center text-gray-400 text-xs italic">ยังไม่มีใครทำคะแนน เริ่มเล่นเลย!</p>';
-                    return;
-                }
-
-                list.innerHTML = sorted.map((s, i) => `
+                const sorted = Object.values(bestScores).sort((a, b) => b.score - a.score);
+                
+                const html = (data) => data.map((s, i) => `
                     <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-emerald-100 shadow-sm update-flash">
                         <span class="font-bold text-emerald-800">#${i + 1} ${s.name}</span>
                         <span class="bg-emerald-600 text-white px-3 py-1 rounded-full font-bold text-sm">${s.score}</span>
                     </div>
                 `).join('');
+
+                if (sorted.length > 0) {
+                    listLogin.innerHTML = html(sorted.slice(0, 5));
+                    listResult.innerHTML = html(sorted.slice(0, 10));
+                } else {
+                    listLogin.innerHTML = '<p class="text-center text-gray-400 text-xs italic">ยังไม่มีใครทำคะแนน</p>';
+                    listResult.innerHTML = '<p class="text-center text-gray-400 text-xs italic">ยังไม่มีข้อมูลคะแนน</p>';
+                }
             }, (error) => {
                 updateStatus(false);
                 console.error("Leaderboard error:", error);
@@ -267,7 +301,7 @@
                 tag.classList.replace('text-gray-400', 'text-emerald-600');
             } else {
                 dot.className = "w-2 h-2 bg-gray-400 rounded-full";
-                text.innerText = "Offline/Error";
+                text.innerText = "Disconnected";
                 tag.classList.replace('text-emerald-600', 'text-gray-400');
             }
         }
